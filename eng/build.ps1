@@ -286,19 +286,14 @@ if ($RuntimeSourceFeed -or $RuntimeSourceFeedKey) {
 }
 
 # Split build categories between dotnet msbuild and desktop msbuild. Use desktop msbuild as little as possible.
-[string[]]$dotnetBuildArguments = $MSBuildArguments
 
 # Don't pass Sign and Publish to desktop msbuild as that would result in double signing and publishing
-$dotnetBuildArguments += "/p:Sign=$Sign"
-$dotnetBuildArguments += "/p:Publish=$Publish"
+$MSBuildArguments += "/p:Sign=$Sign"
+$MSBuildArguments += "/p:Publish=$Publish"
 
-if ($All) { $dotnetBuildArguments += '/p:BuildAllProjects=true' }
+if ($All) { $MSBuildArguments += '/p:BuildAllProjects=true' }
 if ($Projects) {
-    if ($BuildNative) {
-        $MSBuildArguments += "/p:ProjectToBuild=$Projects"
-    } else {
-        $dotnetBuildArguments += "/p:ProjectToBuild=$Projects"
-    }
+    $MSBuildArguments += "/p:ProjectToBuild=$Projects"
 }
 
 if ($NoBuildInstallers) { $MSBuildArguments += "/p:BuildInstallers=false"; $BuildInstallers = $false }
@@ -310,12 +305,12 @@ $BuildNative = $true
 if ($NoBuildNative) { $MSBuildArguments += "/p:BuildNative=false"; $BuildNative = $false }
 if ($BuildNative) { $MSBuildArguments += "/p:BuildNative=true"}
 
-if ($NoBuildJava) { $dotnetBuildArguments += "/p:BuildJava=false"; $BuildJava = $false }
-if ($BuildJava) { $dotnetBuildArguments += "/p:BuildJava=true" }
-if ($NoBuildManaged) { $dotnetBuildArguments += "/p:BuildManaged=false"; $BuildManaged = $false }
-if ($BuildManaged) { $dotnetBuildArguments += "/p:BuildManaged=true" }
-if ($NoBuildNodeJS) { $dotnetBuildArguments += "/p:BuildNodeJSUnlessSourcebuild=false"; $BuildNodeJS = $false }
-if ($BuildNodeJS) { $dotnetBuildArguments += "/p:BuildNodeJSUnlessSourcebuild=true" }
+if ($NoBuildJava) { $MSBuildArguments += "/p:BuildJava=false"; $BuildJava = $false }
+if ($BuildJava) { $MSBuildArguments += "/p:BuildJava=true" }
+if ($NoBuildManaged) { $MSBuildArguments += "/p:BuildManaged=false"; $BuildManaged = $false }
+if ($BuildManaged) { $MSBuildArguments += "/p:BuildManaged=true" }
+if ($NoBuildNodeJS) { $MSBuildArguments += "/p:BuildNodeJSUnlessSourcebuild=false"; $BuildNodeJS = $false }
+if ($BuildNodeJS) { $MSBuildArguments += "/p:BuildNodeJSUnlessSourcebuild=true" }
 
 # Don't bother with two builds if just one will build everything. Ignore super-weird cases like
 # "-Projects ... -NoBuildJava -NoBuildManaged -NoBuildNodeJS". An empty `./build.ps1` command will build both
@@ -416,8 +411,7 @@ function LocateJava {
 if ($BinaryLog) {
     $bl = GetMSBuildBinaryLogCommandLineArgument($MSBuildArguments)
     if (-not $bl) {
-        $dotnetBuildArguments += "/bl:" + (Join-Path $LogDir "Build.binlog")
-        $MSBuildArguments += "/bl:" + (Join-Path $LogDir "Build.native.binlog")
+        $MSBuildArguments += "/bl:" + (Join-Path $LogDir "Build.binlog")
         $ToolsetBuildArguments += "/bl:" + (Join-Path $LogDir "Build.repotasks.binlog")
     } else {
         # Use a different binary log path when running desktop msbuild if doing both builds.
@@ -476,21 +470,11 @@ try {
     }
 
     if (-not $OnlyBuildRepoTasks) {
-        if ($performDesktopBuild) {
-            Write-Host
-            Remove-Item variable:global:_BuildTool -ErrorAction Ignore
-            $msbuildEngine = 'vs'
+        Write-Host
+        Remove-Item variable:global:_BuildTool -ErrorAction Ignore
+        $msbuildEngine = 'vs'
 
-            MSBuild $toolsetBuildProj /p:RepoRoot=$RepoRoot @MSBuildArguments
-        }
-
-        if ($performDotnetBuild) {
-            Write-Host
-            Remove-Item variable:global:_BuildTool -ErrorAction Ignore
-            $msbuildEngine = 'dotnet'
-
-            MSBuild $toolsetBuildProj /p:RepoRoot=$RepoRoot @dotnetBuildArguments
-        }
+        MSBuild $toolsetBuildProj /p:RepoRoot=$RepoRoot @MSBuildArguments
     }
 }
 catch {
